@@ -15,12 +15,14 @@ jobs:
     - name: Install dependencies
       run: |
         apk add build-base git zip gawk python3 py3-pip bash
+
     - name: git checkout
       uses: actions/checkout@v3
 
     - run: |
         git config --global --add safe.directory "$GITHUB_WORKSPACE"
         git fetch --prune --unshallow
+
     - name: Install Python packages
       run: pip3 install -r requirements.txt
 
@@ -37,6 +39,7 @@ jobs:
         name: OPNPS2LD
         path: |
           OPNPS2LD-*.ELF
+
     - name: Upload release artifact info
       if: ${{ success() }}
       uses: actions/upload-artifact@v3
@@ -47,6 +50,7 @@ jobs:
           CREDITS
           LICENSE
           README.md
+
   build-variants:
     strategy:
       fail-fast: false
@@ -67,17 +71,19 @@ jobs:
     - run: |
         git config --global --add safe.directory "$GITHUB_WORKSPACE"
         git fetch --prune --unshallow
+
     - name: Install Python packages
       run: pip3 install -r requirements.txt
 
     - name: Get version
       run: |
         echo "OPL_VERSION=$(make oplversion)" >> $GITHUB_ENV
-        echo OPL_VERSION is $OPL_VERSION
+
     - name: Compile -> make ${{ matrix.t10k }} ${{ matrix.igs }} ${{ matrix.pademu }} ${{ matrix.rtl }} NOT_PACKED=1
       run: |
         make --trace ${{ matrix.t10k }} ${{ matrix.igs }} ${{ matrix.pademu }} ${{ matrix.rtl }} NOT_PACKED=1
-        mv opl.elf OPNPS2LD-$OPL_VERSION-${{ matrix.t10k }}-${{ matrix.igs }}-${{ matrix.pademu }}-${{ matrix.rtl }}.ELF
+        mv opl.elf OPNPS2LD-${{ env.OPL_VERSION }}-${{ matrix.t10k }}-${{ matrix.igs }}-${{ matrix.pademu }}-${{ matrix.rtl }}.ELF
+
     - name: Create detailed changelog
       run: sh ./make_changelog.sh
 
@@ -94,12 +100,14 @@ jobs:
     - name: Install dependencies
       run: |
         apk add build-base git zip gawk python3 py3-pip bash
+
     - name: git checkout
       uses: actions/checkout@v3
 
     - run: |
         git config --global --add safe.directory "$GITHUB_WORKSPACE"
         git fetch --prune --unshallow
+
     - name: Install Python packages
       run: pip3 install -r requirements.txt
 
@@ -116,6 +124,7 @@ jobs:
         name: OPNPS2LD-LANGS
         path: |
           OPNPS2LD-LANGS-*.zip
+
   build-debug:
     strategy:
       fail-fast: false
@@ -133,17 +142,19 @@ jobs:
     - run: |
         git config --global --add safe.directory "$GITHUB_WORKSPACE"
         git fetch --prune --unshallow
+
     - name: Install Python packages
       run: pip3 install -r requirements.txt
 
     - name: Get version
       run: |
         echo "OPL_VERSION=$(make oplversion)" >> $GITHUB_ENV
-        echo OPL_VERSION is $OPL_VERSION
+
     - name: Compile -> make debug
       run: |
         make ${{ matrix.debug }} --trace
         mv opl.elf opl-${{ matrix.debug }}.elf
+
     - name: Upload variants artifact ELF
       uses: actions/upload-artifact@v3
       with:
@@ -172,15 +183,16 @@ jobs:
 
     - name: Prepare artifacts for release
       run: |
-        echo OPL_VERSION is $OPL_VERSION and also ${{ env.OPL_VERSION }}
+        echo packing release of OPL ${{ env.OPL_VERSION }}
         cp INFO/* OPNPS2LD/
         cp INFO/* OPNPS2LD-VARIANTS/
-        7z a -t7z OPNPS2LD-$OPL_VERSION.7z OPNPS2LD/*
-        7z a -t7z OPNPS2LD-VARIANTS-$OPL_VERSION.7z OPNPS2LD-VARIANTS/*
-        7z a -t7z OPNPS2LD-LANGS-$OPL_VERSION.7z OPNPS2LD-LANGS/*
-        cp -f OPNPS2LD-$OPL_VERSION.7z OPNPS2LD.7z
-        cp -f OPNPS2LD-VARIANTS-$OPL_VERSION.7z OPNPS2LD-VARIANTS.7z
-        cp -f OPNPS2LD-LANGS-$OPL_VERSION.7z OPNPS2LD-LANGS.7z
+        7z a -t7z OPNPS2LD-${{ env.OPL_VERSION }}.7z OPNPS2LD/*
+        7z a -t7z OPNPS2LD-VARIANTS-${{ env.OPL_VERSION }}.7z OPNPS2LD-VARIANTS/*
+        7z a -t7z OPNPS2LD-LANGS-${{ env.OPL_VERSION }}.7z OPNPS2LD-LANGS/*
+        cp -f OPNPS2LD-${{ env.OPL_VERSION }}.7z OPNPS2LD.7z
+        cp -f OPNPS2LD-VARIANTS-${{ env.OPL_VERSION }}.7z OPNPS2LD-VARIANTS.7z
+        cp -f OPNPS2LD-LANGS-${{ env.OPL_VERSION }}.7z OPNPS2LD-LANGS.7z
+
     - name: Create prerelease
       if: github.ref == 'refs/heads/master'
       uses: marvinpinto/action-automatic-releases@latest
@@ -190,9 +202,9 @@ jobs:
         automatic_release_tag: "latest"
         title: "${{ steps.version.outputs.version }}"
         files: |
-          OPNPS2LD-$OPL_VERSION.7z
-          OPNPS2LD-VARIANTS-$OPL_VERSION.7z
-          OPNPS2LD-LANGS-$OPL_VERSION.7z
+          OPNPS2LD-${{ env.OPL_VERSION }}.7z
+          OPNPS2LD-VARIANTS-${{ env.OPL_VERSION }}.7z
+          OPNPS2LD-LANGS-${{ env.OPL_VERSION }}.7z
           OPNPS2LD.7z
           OPNPS2LD-VARIANTS.7z
           OPNPS2LD-LANGS.7z
@@ -203,25 +215,26 @@ jobs:
       with:
         repo_token: "${{ secrets.GITHUB_TOKEN }}"
         prerelease: "${{ contains(github.ref, '-rc') }}"
-        title: "${{ steps.version.outputs.version }}"
+        title: "${{ env.OPL_VERSION }}"
         files: |
-          OPNPS2LD-${{ steps.version.outputs.version }}.7z
-          OPNPS2LD-VARIANTS-${{ steps.version.outputs.version }}.7z
-          OPNPS2LD-LANGS-${{ steps.version.outputs.version }}.7z
+          OPNPS2LD-${{ env.OPL_VERSION }}.7z
+          OPNPS2LD-VARIANTS-${{ env.OPL_VERSION }}.7z
+          OPNPS2LD-LANGS-${{ env.OPL_VERSION }}.7z
           OPNPS2LD.7z
           OPNPS2LD-VARIANTS.7z
           OPNPS2LD-LANGS.7z
+
     - name: Upload pre-release to Mega
       if: github.ref == 'refs/heads/master' && env.USERNAME != null
       uses: Difegue/action-megacmd@master
       with:
-        args: put -c OPNPS2LD.7z /OPL/Pre-Release/${{ steps.version.outputs.version }}/run_${{ github.run_number }}/
+        args: put -c OPNPS2LD.7z /OPL/Pre-Release/${{ env.OPL_VERSION }}/run_${{ github.run_number }}/
 
     - name: Upload release to Mega
       if: startsWith(github.ref, 'refs/tags/v') && env.USERNAME != null
       uses: Difegue/action-megacmd@master
       with:
-        args: put -c OPNPS2LD.7z /OPL/Release/${{ steps.version.outputs.version }}/
+        args: put -c OPNPS2LD.7z /OPL/Release/${{ env.OPL_VERSION }}/
 
   build-opltestiso:
     runs-on: ubuntu-latest
@@ -236,10 +249,12 @@ jobs:
     - run: |
         git config --global --add safe.directory "$GITHUB_WORKSPACE"
         git fetch --prune --unshallow
+
     - name: make ISO
       run: |
           cd labs/opltestiso/
           make iso
+
     - name: Upload release artifact ISO
       uses: actions/upload-artifact@v3
       with:
